@@ -154,5 +154,12 @@ Resources:
           Values: [/]
         ListenerArn: !Ref 'Listener'
         Priority: 1
+
+Outputs:
+  LoadBalancerDNSName:
+    Description: DNS name assigned to load balancer
+    Value: !Sub "http://${WebServerLoadBalancer.DNSName}"
+    Export:
+      Name: !Sub "${ProjectName}-LoadBalancer-DNSName"
   
   
