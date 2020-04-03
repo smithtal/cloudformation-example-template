@@ -1,0 +1,49 @@
+Description: >
+  Travis Smith/2020
+  IAM Roles for Udagram
+
+Parameters:
+  ProjectName:
+    Description:  Name of the project
+    Type: String
+
+Resources:
+  UdacityS3ReadOnlyEC2:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: s3ReadOnly
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - "s3:GetObject"
+                Resource: '*'
+      Tags:
+        - Key: Name
+          Value: !Sub '${ProjectName}S3ReadOnlyRole'
+  
+  ProfileWithRolesForOurApp:
+    Type: AWS::IAM::InstanceProfile
+    Properties: 
+      Roles:
+        - !Ref UdacityS3ReadOnlyEC2
+
+Outputs:
+  InstanceProfile:
+    Description: Instance Profile with S3 Read Permissions
+    Value: !Ref ProfileWithRolesForOurApp
+    Export:
+      Name: !Sub ${ProjectName}-InstanceProfile
+      

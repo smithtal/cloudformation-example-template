@@ -1,0 +1,158 @@
+Description: >
+  Travis Smith/ Udacity 2020
+
+Parameters:
+  ProjectName:
+    Description: ProjectName
+    Type: String
+
+  MinimumWebServerInstances:
+    Description: Minimum number of web server instances in the AutoScaling group
+    Type: String
+
+  MaximumWebServerInstances:
+    Description: Maximum number of web server instances in the AutoScaling group
+    Type: String
+  
+  WebServerVolumeSize:
+    Description: Storage in GB allocated to web server EBS
+    Type: String
+  
+
+Resources:
+
+  WebServerSecGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP access
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${ProjectName}-VPCID"
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+      - IpProtocol: tcp
+        FromPort: 0
+        ToPort: 65535
+        CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName} Web Server Security Group"
+
+  WebServerTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 8
+      HealthyThresholdCount: 2
+      Port: 80
+      Protocol: HTTP
+      UnhealthyThresholdCount: 5
+      VpcId: 
+        Fn::ImportValue:
+          Fn::Sub: "${ProjectName}-VPCID"
+
+
+
+  WebServerLaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          apt-get update -y
+          apt-get install unzip awscli -y
+          apt-get install apache2 -y
+          systemctl start apache2.service
+          cd /var/www/html
+          aws s3 cp s3://udacity-demo-1/udacity.zip .
+          unzip -o udacity.zip
+      IamInstanceProfile:
+        Fn::ImportValue:
+          Fn::Sub: "${ProjectName}-InstanceProfile"
+      ImageId: ami-0d1cd67c26f5fca19 
+      SecurityGroups:
+      - Ref: WebServerSecGroup
+      InstanceType: t3.medium
+      BlockDeviceMappings:
+      - DeviceName: "/dev/sdk"
+        Ebs:
+          VolumeSize: !Ref WebServerVolumeSize
+
+  WebServerAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier:
+      - Fn::ImportValue: 
+          !Sub "${ProjectName}-PRIV-NETS"
+      LaunchConfigurationName:
+        Ref: WebServerLaunchConfig
+      MinSize: !Ref MinimumWebServerInstances
+      MaxSize: !Ref MaximumWebServerInstances
+      TargetGroupARNs:
+      - Ref: WebServerTargetGroup
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName} WebServer AutoScaling Group"
+          PropagateAtLaunch: true
+  
+  LoadBalancerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow HTTP access
+      VpcId:
+        Fn::ImportValue:
+          !Sub "${ProjectName}-VPCID"
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 80
+        ToPort: 80
+        CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+      - IpProtocol: tcp
+        FromPort: 0
+        ToPort: 65535
+        CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "${ProjectName} Load Balancer Security Group"
+
+  WebServerLoadBalancer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Subnets:
+      - Fn::ImportValue: !Sub "${ProjectName}-PUB1-SN"
+      - Fn::ImportValue: !Sub "${ProjectName}-PUB2-SN"
+      SecurityGroups:
+      - Ref: LoadBalancerSecurityGroup
+
+  Listener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+      - Type: forward
+        TargetGroupArn:
+          Ref: WebServerTargetGroup
+      LoadBalancerArn:
+        Ref: WebServerLoadBalancer
+      Port: '80'
+      Protocol: HTTP
+
+  ALBListenerRule:
+      Type: AWS::ElasticLoadBalancingV2::ListenerRule
+      Properties:
+        Actions:
+        - Type: forward
+          TargetGroupArn: !Ref 'WebServerTargetGroup'
+        Conditions:
+        - Field: path-pattern
+          Values: [/]
+        ListenerArn: !Ref 'Listener'
+        Priority: 1
+  
+  

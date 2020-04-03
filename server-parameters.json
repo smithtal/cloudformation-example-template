@@ -1,0 +1,18 @@
+[
+    {
+        "ParameterKey": "ProjectName",
+        "ParameterValue": "Udagram"
+    },
+    {
+        "ParameterKey": "MinimumWebServerInstances",
+        "ParameterValue": "4"
+    },
+    {
+        "ParameterKey": "MaximumWebServerInstances",
+        "ParameterValue": "6"
+    },
+    {
+        "ParameterKey": "WebServerVolumeSize",
+        "ParameterValue": "10"
+    }
+]
