@@ -1,6 +1,9 @@
 # Deploy a High-Availability Web App using CloudFormation
 ## Travis Smith
 
+
+[Working Deployment](http://udagr-webse-ylzpuhzc9d93-889392509.us-west-2.elb.amazonaws.com/)
+
 The template included will launch 4 EC2 instances running the Udagram App on Apache.
 
 The application consists of 3 stacks, running the following commands in this order will create the stacks:
@@ -50,3 +53,5 @@ The application consists of 3 stacks, running the following commands in this ord
         - InstancePolicy
     - Server
         - LoadBalancer Name
+
+- Working Test:  http://udagr-webse-ylzpuhzc9d93-889392509.us-west-2.elb.amazonaws.com
